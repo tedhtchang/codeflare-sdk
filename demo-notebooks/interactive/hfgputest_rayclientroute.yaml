@@ -1,0 +1,248 @@
+apiVersion: mcad.ibm.com/v1beta1
+kind: AppWrapper
+metadata:
+  name: hfgputest
+  namespace: default
+spec:
+  priority: 9
+  resources:
+    GenericItems:
+    - generictemplate:
+        apiVersion: v1
+        data:
+          ca.crt: LS0tLS1CRUdJTiBDRVJUSUZJQ0FURS0tLS0tCk1JSUNvRENDQVlnQ0NRRFlkc21CRHlPREx6QU5CZ2txaGtpRzl3MEJBUXNGQURBU01SQXdEZ1lEVlFRRERBZHkKYjI5MExXTmhNQjRYRFRJek1ETXdNakl4TWpJeE0xb1hEVEk0TURNd01USXhNakl4TTFvd0VqRVFNQTRHQTFVRQpBd3dIY205dmRDMWpZVENDQVNJd0RRWUpLb1pJaHZjTkFRRUJCUUFEZ2dFUEFEQ0NBUW9DZ2dFQkFMSkJxL00yCnNyZnZJWUYwZVBIWGFFYVozbVR2SDU1cWVFMUNKVVcvc0Jsc1pIWldRcTh6dVRyaHNNNlFVb3krZWhvRnJDWkMKb3NCNmloVnBZRi9sc20xU0xqNVVMaHNCYnlCTVRYRlpac0V3cm5WNzVZSUNIMkt0Z05xRHVqb0VSQXFNanN5dApBQWpod1dzRk9uUUZpRkM3LzdQQ1U4TUJNVnJ1dC94eHB4NFYrYm9sWUtmSTRubmFZRm5aaVpqTkNmS3BOMGtVCmlCMjZHM0lwWG1VOE9teEdjSVU3ajJoZEY1TUZiQVZhM3BVcVdJUnNlaHVya0k5bEM0WVJncVoxSTVqZE1UdmkKRTRHRGQwaVZXcGhZa0FDYXN6ay83dzB5UUpiSGxKR2RSRGZGZ3FLMWFDaGthWmZhbXlCTUF1N1F6NktvU3dscwpaSURDbkpFVWZ4TXZsQnNDQXdFQUFUQU5CZ2txaGtpRzl3MEJBUXNGQUFPQ0FRRUFyenhCV0xGdHFIT0NtV3FmCncrRnF5Tm51by9naEZ0Z3dHdlJlQ3lXWUVEa3dNeDZWLzlaa3dhNER4bVFwWHBrYTBsWi9YMFlRcEQ1NHJCSFgKRXdWaVZDbjg1bThmcXZTRzJDYTZCcEhNYWdwbUNxRWs5a2poY3VLaXlqdGRQYjJmc0ZNTXFta0ZadjhvNnZDWApGV1poWm1BRVU5VWRobVQvOUdvVXZxdFc4bThsK1IwWFlQQi9LL0c1WEFoTnIzdVZMc2gwa2xZTHI2KzhYREU5CmcwaGswUG5qZytiYTMvMEdsY08rbTJseThYcXd0Y21NTEdsRDBQOGp6cG1DbmhSenNYYU5xVjRCdFhyQ1dURDQKUUJwdjdsaUNjMUNFU0dQZVc2dHVqOThVbUpWaU1vVmZtZlZ1TFgzbm5LcDk1RFBSaU9EZlpYY1A4WlNNSHdCQwo3WWw2K2c9PQotLS0tLUVORCBDRVJUSUZJQ0FURS0tLS0tCg==
+          ca.key: LS0tLS1CRUdJTiBQUklWQVRFIEtFWS0tLS0tCk1JSUV2Z0lCQURBTkJna3Foa2lHOXcwQkFRRUZBQVNDQktnd2dnU2tBZ0VBQW9JQkFRQ3lRYXZ6TnJLMzd5R0IKZEhqeDEyaEdtZDVrN3grZWFuaE5RaVZGdjdBWmJHUjJWa0t2TTdrNjRiRE9rRktNdm5vYUJhd21RcUxBZW9vVgphV0JmNWJKdFVpNCtWQzRiQVc4Z1RFMXhXV2JCTUs1MWUrV0NBaDlpcllEYWc3bzZCRVFLakk3TXJRQUk0Y0ZyCkJUcDBCWWhRdS8rendsUERBVEZhN3JmOGNhY2VGZm02SldDbnlPSjUybUJaMlltWXpRbnlxVGRKRklnZHVodHkKS1Y1bFBEcHNSbkNGTzQ5b1hSZVRCV3dGV3Q2VktsaUViSG9icTVDUFpRdUdFWUttZFNPWTNURTc0aE9CZzNkSQpsVnFZV0pBQW1yTTVQKzhOTWtDV3g1U1JuVVEzeFlLaXRXZ29aR21YMnBzZ1RBTHUwTStpcUVzSmJHU0F3cHlSCkZIOFRMNVFiQWdNQkFBRUNnZ0VBWENtUUdhT0NLNDg3cDQ3c3FUMVI4STdGYVRJcEN1TEphRWgydE9VeXl6STcKanVOeWZ0c2pQY3BLZThJcXJCSWZWeXp2b0toN05VRWwrNFFNREFqYWc2TWx2WndRYW00SFlvK1F5cllLWm9BZwo4eVVudUZ3WWxoQld1cU80dVI1VGY1REVsQll1R21sK2N6SzAwaCs2SnVQTWhNaElQbDV6Z2l4Q2ZBYlcvTHBLCk1xRXlvM2U1ci9peFB2MFNQVVhUT0tCT2YrSS9OL2xHejV2UjVOVzJSVy9EVStCOENZakdJclJ3Ulk0WGV0ZEwKbi93SUt1TXNrQUptREswMVlGb0JWYWtmVllRdzNIUHByRjdKQk5qWlNvTGZ4UWNQaUdiWlU3ekp4Y0FHUlBiegpBY2xvMTdKcXBtR2U3bHMwa1AwQ01GdWt0UFJ2eEp4elJnQU1XUUlySVFLQmdRRHBHZHhmbDVaV2Zmb0VwV3QwCnFrYlk1cTNya2Q2S2tsOXNDS2wreDI2cXF4aitFbzJQbmdmb1Q4WUhzQzMrMTRwM0RMY25SbkF5K2JxdnZCR3oKeWNQTVVNY3dLRGtwOVBKUHhiMnczZk85ZHFDWTl6T1krSlZUaDVlaVZnbC9tUHpoMC8xNkYxeE5lSXBRNSs4UQphR2s0aERodnJLaXZiNHlnMUVNaVd0RkNud0tCZ1FERHhJMzlFYkRNNW40S2VVejdFMFdxb3ZmVHRTWjJ0bm03CktVcHVqajRGRERzQ3FnUHEzTUxqY1ZoVTcyOHpZbnp0U2hQYVdkaDFDc2RhMi9TN1UrTlg4dTkrMWV3aXNSRmQKYkR2ZFVWVVhhcm82bUU2YksxSXRVYjlraWVWVmJqMXVmQUJKN2VQNmMwdUpESjRVeXp4U0JpQW9IbG1ZeGM3MgpNRXZqdlJCWkJRS0JnUUNVVkI5Mk9MaXlxeEU0ZWFiS0l6eFg4MXBDcDV6TDR0NlRtV041eUNBMHZCRjRRNGdQCkZvbURtNWV3OXJ3ZUNUd1VDMlJVdXE3VTBUS3BkdXh3MG5na2dGWnYzM2lZcVVTejNHbWJyWERYWkRCSGhpNHcKTGlhZmM0M2JBQktsUGszVXloZm01QXlaUTVZSWE3NGxXN3R3K2pvTFhmd3RQcmRtOUFzUVJtZ1lrd0tCZ1FDagpTMjdNcTFiNGMwS3JaZWNLZjFiYk1MamNCUHlpaFM4aEtSNEcvZXRKdHB2NmF1cDltOHVNZ0YwWDYraXJ5ZmsrCnpVMm1FczkxUVpwc2RaQzhPUXNucjJLS1A5S0tWWHlRbXRtTWtHMFQ3VmlOeThHMXVQc0JCbkZKWWFURUVBSjYKQ0VFTmFidUNpMjEwVWV3Q21Fd21keW1YalVsYkg1UzAwakJiTkxkUUtRS0JnQnRzMWZtaTNYaE0rYmRLR0tIcgpuZ2I3aDdtdUFPTFlYSFNvVnJRZ09Gc25Fby9uVDNlRjFHYldsNldGNUdSRnNPUXV1T2F2d0t0ajVvVHhVUURoCnlLeVlqMFpuZUg4VFRxMG1GZGZXejViR1VUQ2pNZG4wWTBiLy9uTW9iWmJTTTJDaXA3aGROeTV5YmJuZVFaQ3cKZXQ0cVlaTWdSb05VOXFFZWRiZ1UzRmZwCi0tLS0tRU5EIFBSSVZBVEUgS0VZLS0tLS0K
+        kind: Secret
+        metadata:
+          name: ca-secret
+    - custompodresources:
+      - limits:
+          cpu: 2
+          memory: 8G
+          nvidia.com/gpu: 0
+        replicas: 1
+        requests:
+          cpu: 2
+          memory: 8G
+          nvidia.com/gpu: 0
+      - limits:
+          cpu: 8
+          memory: 16G
+          nvidia.com/gpu: 0
+        replicas: 1
+        requests:
+          cpu: 8
+          memory: 16G
+          nvidia.com/gpu: 0
+      generictemplate:
+        apiVersion: ray.io/v1alpha1
+        kind: RayCluster
+        metadata:
+          labels:
+            appwrapper.mcad.ibm.com: hfgputest
+            controller-tools.k8s.io: '1.0'
+          name: hfgputest
+          namespace: default
+        spec:
+          autoscalerOptions:
+            idleTimeoutSeconds: 60
+            imagePullPolicy: Always
+            resources:
+              limits:
+                cpu: 500m
+                memory: 512Mi
+              requests:
+                cpu: 500m
+                memory: 512Mi
+            upscalingMode: Default
+          enableInTreeAutoscaling: false
+          headGroupSpec:
+            rayStartParams:
+              block: 'true'
+              dashboard-host: 0.0.0.0
+              num-gpus: '0'
+              address: ''
+            serviceType: ClusterIP
+            template:
+              spec:
+                containers:
+                - image: ghcr.io/foundation-model-stack/base:ray2.1.0-py38-gpu-pytorch1.12.0cu116-20221213-193103
+                  imagePullPolicy: Always
+                  lifecycle:
+                    preStop:
+                      exec:
+                        command:
+                        - /bin/sh
+                        - -c
+                        - ray stop
+                  name: ray-head
+                  ports:
+                  - containerPort: 6379
+                    name: gcs
+                  - containerPort: 8265
+                    name: dashboard
+                  - containerPort: 10001
+                    name: client
+                  resources:
+                    limits:
+                      cpu: 2
+                      memory: 8G
+                      nvidia.com/gpu: 0
+                    requests:
+                      cpu: 2
+                      memory: 8G
+                      nvidia.com/gpu: 0
+                  env:
+                  - name: RAY_USE_TLS
+                    value: "1"
+                  - name: RAY_TLS_SERVER_CERT
+                    value: /home/ray/workspace/tls/server.crt
+                  - name: RAY_TLS_SERVER_KEY
+                    value: /home/ray/workspace/tls/server.key
+                  - name: RAY_TLS_CA_CERT
+                    value: /home/ray/workspace/ca/ca.crt
+                  volumeMounts:
+                  - name: ca
+                    mountPath: "/home/ray/workspace/ca"
+                    readOnly: true
+                  - name: server-cert
+                    mountPath: "/home/ray/workspace/tls"
+                initContainers:
+                - command:
+                  - sh
+                  - -c
+                  - cd /home/ray/workspace/tls && openssl req -nodes -newkey rsa:2048 -keyout server.key -out server.csr -subj '/CN=ray-head' && printf "authorityKeyIdentifier=keyid,issuer\nbasicConstraints=CA:FALSE\nsubjectAltName = @alt_names\n[alt_names]\nDNS.1 = 127.0.0.1\nDNS.2 = localhost\nDNS.3 = ${RAY_IP}\nDNS.4 = $(awk 'END{print $1}' /etc/hosts)\nDNS.5 = rayclient-$(cat /var/run/secrets/kubernetes.io/serviceaccount/namespace).apps.$(grep search /etc/resolv.conf|awk '{print $NF}')">./domain.ext && openssl x509 -req -CA /home/ray/workspace/ca/ca.crt -CAkey /home/ray/workspace/ca/ca.key -in server.csr -out server.crt -days 365 -CAcreateserial -extfile domain.ext 
+                  image: docker.io/redhat/ubi9
+                  name: create-cert
+                  securityContext:
+                    runAsUser: 1000
+                    runAsGroup: 1000
+                  volumeMounts:
+                  - name: ca
+                    mountPath: "/home/ray/workspace/ca"
+                    readOnly: true
+                  - name: server-cert
+                    mountPath: "/home/ray/workspace/tls"
+                volumes:
+                - name: ca
+                  secret:
+                    secretName: ca-secret
+                  optional: false
+                - name: server-cert
+                  emptyDir: {}
+          rayVersion: 1.12.0
+          workerGroupSpecs:
+          - groupName: small-group-hfgputest
+            maxReplicas: 2
+            minReplicas: 2
+            rayStartParams:
+              block: 'true'
+              num-gpus: '0'
+            replicas: 2
+            template:
+              metadata:
+                annotations:
+                  key: value
+                labels:
+                  key: value
+              spec:
+                containers:
+                - env:
+                  - name: MY_POD_IP
+                    valueFrom:
+                      fieldRef:
+                        fieldPath: status.podIP
+                  image: ghcr.io/foundation-model-stack/base:ray2.1.0-py38-gpu-pytorch1.12.0cu116-20221213-193103
+                  lifecycle:
+                    preStop:
+                      exec:
+                        command:
+                        - /bin/sh
+                        - -c
+                        - ray stop
+                  name: machine-learning
+                  resources:
+                    limits:
+                      cpu: 4
+                      memory: 8G
+                      nvidia.com/gpu: 0
+                    requests:
+                      cpu: 4
+                      memory: 8G
+                      nvidia.com/gpu: 0
+                  env:
+                  - name: RAY_USE_TLS
+                    value: "1"
+                  - name: RAY_TLS_SERVER_CERT
+                    value: /home/ray/workspace/tls/server.crt
+                  - name: RAY_TLS_SERVER_KEY
+                    value: /home/ray/workspace/tls/server.key
+                  - name: RAY_TLS_CA_CERT
+                    value: /home/ray/workspace/ca/ca.crt
+                  volumeMounts:
+                  - name: ca
+                    mountPath: "/home/ray/workspace/ca"
+                    readOnly: true
+                  - name: server-cert
+                    mountPath: "/home/ray/workspace/tls"
+                    readOnly: true
+                initContainers:
+                - command:
+                  - sh
+                  - -c
+                  - until nslookup $RAY_IP.$(cat /var/run/secrets/kubernetes.io/serviceaccount/namespace).svc.cluster.local;
+                    do echo waiting for myservice; sleep 2; done
+                  image: busybox:1.28
+                  name: init-myservice
+                - command:
+                  - sh
+                  - -c
+                  - cd /home/ray/workspace/tls && openssl req -nodes -newkey rsa:2048 -keyout server.key -out server.csr -subj '/CN=ray-head' && printf "authorityKeyIdentifier=keyid,issuer\nbasicConstraints=CA:FALSE\nsubjectAltName = @alt_names\n[alt_names]\nDNS.1 = 127.0.0.1\nDNS.2 = localhost\nDNS.3 = ${RAY_IP}\nDNS.4 = $(awk 'END{print $1}' /etc/hosts)\nDNS.5 = rayclient-$(cat /var/run/secrets/kubernetes.io/serviceaccount/namespace).apps.$(grep search /etc/resolv.conf|awk '{print $NF}')">./domain.ext && openssl x509 -req -CA /home/ray/workspace/ca/ca.crt -CAkey /home/ray/workspace/ca/ca.key -in server.csr -out server.crt -days 365 -CAcreateserial -extfile domain.ext 
+                  image: docker.io/redhat/ubi9
+                  name: create-cert
+                  securityContext:
+                    runAsUser: 1000
+                    runAsGroup: 1000
+                  volumeMounts:
+                  - name: ca
+                    mountPath: "/home/ray/workspace/ca"
+                    readOnly: true
+                  - name: server-cert
+                    mountPath: "/home/ray/workspace/tls"
+                volumes:
+                - name: ca
+                  secret:
+                    secretName: ca-secret
+                  optional: false
+                - name: server-cert
+                  emptyDir: {}
+      replicas: 1
+    - generictemplate:
+        apiVersion: route.openshift.io/v1
+        kind: Route
+        metadata:
+          labels:
+            odh-ray-cluster-service: hfgputest-head-svc
+          name: ray-dashboard-hfgputest
+          namespace: default
+        spec:
+          port:
+            targetPort: dashboard
+          to:
+            kind: Service
+            name: hfgputest-head-svc
+    - generictemplate:
+        apiVersion: route.openshift.io/v1
+        kind: Route
+        metadata:
+          name: rayclient
+          namespace: default
+        spec:
+          port:
+            targetPort: client
+          tls:
+            termination: passthrough
+          to:
+            kind: Service
+            name: hfgputest-head-svc
+    Items: []
