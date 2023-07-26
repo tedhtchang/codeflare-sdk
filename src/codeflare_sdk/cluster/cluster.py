@@ -168,6 +168,8 @@ class Cluster:
                 plural="appwrappers",
                 body=aw,
             )
+            # Create the ingress
+            create_ingress(self)
         except Exception as e:  # pragma: no cover
             return _kube_api_error_handling(e)
 
@@ -187,6 +189,9 @@ class Cluster:
                 plural="appwrappers",
                 name=self.app_wrapper_name,
             )
+            # Delete the ingress
+            api_instance = client.NetworkingV1Api(api_config_handler())
+            api_instance.delete_namespaced_ingress(name=f"ray-dashboard-{self.config.name}", namespace=namespace)
         except Exception as e:  # pragma: no cover
             return _kube_api_error_handling(e)
 
@@ -319,20 +324,17 @@ class Cluster:
         """
         try:
             config_check()
-            api_instance = client.CustomObjectsApi(api_config_handler())
-            routes = api_instance.list_namespaced_custom_object(
-                group="route.openshift.io",
-                version="v1",
-                namespace=self.config.namespace,
-                plural="routes",
-            )
-        except Exception as e:  # pragma: no cover
+            api_instance = client.NetworkingV1Api(api_config_handler())
+            ingresses = api_instance.list_namespaced_ingress(self.config.namespace)
+        except Exception as e:
             return _kube_api_error_handling(e)
-
-        for route in routes["items"]:
-            if route["metadata"]["name"] == f"ray-dashboard-{self.config.name}":
-                protocol = "https" if route["spec"].get("tls") else "http"
-                return f"{protocol}://{route['spec']['host']}"
+        
+        for ingress in ingresses.items:
+            if (
+                ingress.metadata.name == f"ray-dashboard-{self.config.name}"
+                and ingress.spec.rules[0].host.startswith(f"ray-dashboard-{self.config.name}")
+            ):
+                return f"http://{ingress.spec.rules[0].host}"
         return "Dashboard route not available yet, have you run cluster.up()?"
 
     def list_jobs(self) -> List:
@@ -422,6 +424,52 @@ class Cluster:
         else:
             return "None"
 
+def create_ingress(self):
+    """
+    Create a Kubernetes Ingress resource to expose the Ray dashboard service externally.
+    """
+    ingress_domain = _get_ingress_domain()
+    try:
+        config_check()
+        api_instance = client.NetworkingV1Api(api_config_handler())
+
+        ingress_manifest = {
+            "apiVersion": "networking.k8s.io/v1",
+            "kind": "Ingress",
+            "metadata": {
+                "name": f"ray-dashboard-{self.config.name}",
+                "namespace": self.config.namespace,
+            },
+            "spec": {
+                "rules": [
+                    {
+                        "host": f"ray-dashboard-{self.config.name}.{self.config.namespace}.{ingress_domain}",
+                        "http": {
+                            "paths": [
+                                {
+                                    "path": "/",
+                                    "pathType": "Prefix",
+                                    "backend": {
+                                        "service": {
+                                            "name": f"{self.config.name}-head-svc",
+                                            "port": {
+                                                "number": 8265,
+                                            },
+                                        }
+                                    },
+                                }
+                            ]
+                        },
+                    }
+                ],
+            },
+        }
+
+        api_instance.create_namespaced_ingress(
+            namespace=self.config.namespace, body=ingress_manifest
+        )
+    except Exception as e:
+        return _kube_api_error_handling(e)
 
 def list_all_clusters(namespace: str, print_to_console: bool = True):
     """
@@ -597,18 +645,15 @@ def _map_to_ray_cluster(rc) -> Optional[RayCluster]:
         status = RayClusterStatus.UNKNOWN
 
     config_check()
-    api_instance = client.CustomObjectsApi(api_config_handler())
-    routes = api_instance.list_namespaced_custom_object(
-        group="route.openshift.io",
-        version="v1",
-        namespace=rc["metadata"]["namespace"],
-        plural="routes",
-    )
+    api_instance = client.NetworkingV1Api(api_config_handler())
+    ingresses = api_instance.list_namespaced_ingress(rc["metadata"]["namespace"])
+
     ray_route = None
-    for route in routes["items"]:
-        if route["metadata"]["name"] == f"ray-dashboard-{rc['metadata']['name']}":
-            protocol = "https" if route["spec"].get("tls") else "http"
-            ray_route = f"{protocol}://{route['spec']['host']}"
+    for ingress in ingresses.items:
+        if ingress.metadata.name == f"ray-dashboard-{rc['metadata']['name']}":
+            ray_route = ingress.spec.rules[0].host
+        
+
 
     return RayCluster(
         name=rc["metadata"]["name"],
