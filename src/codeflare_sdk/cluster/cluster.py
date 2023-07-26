@@ -191,7 +191,9 @@ class Cluster:
             )
             # Delete the ingress
             api_instance = client.NetworkingV1Api(api_config_handler())
-            api_instance.delete_namespaced_ingress(name=f"ray-dashboard-{self.config.name}", namespace=namespace)
+            api_instance.delete_namespaced_ingress(
+                name=f"ray-dashboard-{self.config.name}", namespace=namespace
+            )
         except Exception as e:  # pragma: no cover
             return _kube_api_error_handling(e)
 
@@ -328,11 +330,13 @@ class Cluster:
             ingresses = api_instance.list_namespaced_ingress(self.config.namespace)
         except Exception as e:
             return _kube_api_error_handling(e)
-        
+
         for ingress in ingresses.items:
             if (
                 ingress.metadata.name == f"ray-dashboard-{self.config.name}"
-                and ingress.spec.rules[0].host.startswith(f"ray-dashboard-{self.config.name}")
+                and ingress.spec.rules[0].host.startswith(
+                    f"ray-dashboard-{self.config.name}"
+                )
             ):
                 return f"http://{ingress.spec.rules[0].host}"
         return "Dashboard route not available yet, have you run cluster.up()?"
@@ -424,6 +428,7 @@ class Cluster:
         else:
             return "None"
 
+
 def create_ingress(self):
     """
     Create a Kubernetes Ingress resource to expose the Ray dashboard service externally.
@@ -470,6 +475,7 @@ def create_ingress(self):
         )
     except Exception as e:
         return _kube_api_error_handling(e)
+
 
 def list_all_clusters(namespace: str, print_to_console: bool = True):
     """
@@ -652,8 +658,6 @@ def _map_to_ray_cluster(rc) -> Optional[RayCluster]:
     for ingress in ingresses.items:
         if ingress.metadata.name == f"ray-dashboard-{rc['metadata']['name']}":
             ray_route = ingress.spec.rules[0].host
-        
-
 
     return RayCluster(
         name=rc["metadata"]["name"],
