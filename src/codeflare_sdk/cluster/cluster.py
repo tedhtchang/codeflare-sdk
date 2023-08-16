@@ -168,8 +168,6 @@ class Cluster:
                 plural="appwrappers",
                 body=aw,
             )
-            # Create the ingress
-            create_ingress(self)
         except Exception as e:  # pragma: no cover
             return _kube_api_error_handling(e)
 
@@ -188,11 +186,6 @@ class Cluster:
                 namespace=namespace,
                 plural="appwrappers",
                 name=self.app_wrapper_name,
-            )
-            # Delete the ingress
-            api_instance = client.NetworkingV1Api(api_config_handler())
-            api_instance.delete_namespaced_ingress(
-                name=f"ray-dashboard-{self.config.name}", namespace=namespace
             )
         except Exception as e:  # pragma: no cover
             return _kube_api_error_handling(e)
@@ -429,54 +422,6 @@ class Cluster:
             return "None"
 
 
-def create_ingress(self):
-    """
-    Create a Kubernetes Ingress resource to expose the Ray dashboard service externally.
-    """
-    ingress_domain = _get_ingress_domain()
-    try:
-        config_check()
-        api_instance = client.NetworkingV1Api(api_config_handler())
-
-        ingress_manifest = {
-            "apiVersion": "networking.k8s.io/v1",
-            "kind": "Ingress",
-            "metadata": {
-                "name": f"ray-dashboard-{self.config.name}",
-                "namespace": self.config.namespace,
-            },
-            "spec": {
-                "rules": [
-                    {
-                        "host": f"ray-dashboard-{self.config.name}.{self.config.namespace}.{ingress_domain}",
-                        "http": {
-                            "paths": [
-                                {
-                                    "path": "/",
-                                    "pathType": "Prefix",
-                                    "backend": {
-                                        "service": {
-                                            "name": f"{self.config.name}-head-svc",
-                                            "port": {
-                                                "number": 8265,
-                                            },
-                                        }
-                                    },
-                                }
-                            ]
-                        },
-                    }
-                ],
-            },
-        }
-
-        api_instance.create_namespaced_ingress(
-            namespace=self.config.namespace, body=ingress_manifest
-        )
-    except Exception as e:
-        return _kube_api_error_handling(e)
-
-
 def list_all_clusters(namespace: str, print_to_console: bool = True):
     """
     Returns (and prints by default) a list of all clusters in a given namespace.
@@ -553,7 +498,7 @@ def _get_ingress_domain():
         config_check()
         api_client = client.CustomObjectsApi(api_config_handler())
         ingress = api_client.get_cluster_custom_object(
-            "config.openshift.io", "v1", "ingresses", "cluster"
+            "networking.k8s.io", "v1", "ingresses", "cluster"
         )
     except Exception as e:  # pragma: no cover
         return _kube_api_error_handling(e)
