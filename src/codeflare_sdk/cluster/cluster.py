@@ -495,14 +495,13 @@ def get_cluster(cluster_name: str, namespace: str = "default"):
 # private methods
 def _get_ingress_domain():
     try:
-        config_check()
-        api_client = client.CustomObjectsApi(api_config_handler())
-        ingress = api_client.get_cluster_custom_object(
-            "networking.k8s.io", "v1", "ingresses", "cluster"
-        )
+        config_check()   
+        api_client = client.NetworkingV1Api(api_config_handler())
+        ingress = api_client.list_namespaced_ingress(get_current_namespace())
     except Exception as e:  # pragma: no cover
         return _kube_api_error_handling(e)
-    return ingress["spec"]["domain"]
+    domain = ingress.items[1].spec.rules[0].host
+    return domain
 
 
 def _app_wrapper_status(name, namespace="default") -> Optional[AppWrapper]:
