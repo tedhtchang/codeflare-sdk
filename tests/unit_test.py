@@ -386,6 +386,10 @@ def test_cluster_uris(mocker):
         return_value={"spec": {"domain": ""}},
     )
     mocker.patch(
+        "codeflare_sdk.cluster.cluster._get_ingress_domain",
+        return_value="apps.cluster.awsroute.org",
+    )
+    mocker.patch(
         "kubernetes.client.NetworkingV1Api.list_namespaced_ingress",
         return_value=ingress_retrieval(),
     )
@@ -433,31 +437,20 @@ def ray_addr(self, *args):
 
 def ingress_retrieval():
     mock_ingress = client.V1Ingress(
-        metadata={"name": "mock-ingress-1"},
-        spec={
-            "rules": [
-                {
-                    "host": "ray-dashboard-unit-test-cluster-ns.apps.cluster.awsroute.org",
-                    "http": {
-                        "paths": [
-                            {
-                                "path": "/",
-                                "backend": {
-                                    "service_name": "unit-test-cluster-head-svc"
-                                },
-                            }
-                        ]
-                    },
-                }
-            ]
-        },
+        metadata=client.V1ObjectMeta(name="ray-dashboard-unit-test-cluster"),
+        spec=client.V1IngressSpec(
+            rules=[
+                client.V1IngressRule(
+                    host="ray-dashboard-unit-test-cluster-ns.apps.cluster.awsroute.org"
+                )
+            ],
+        ),
     )
     mock_ingress_list = client.V1IngressList(items=[mock_ingress])
     return mock_ingress_list
 
 
 def test_ray_job_wrapping(mocker):
-    mocker.patch("kubernetes.config.load_kube_config", return_value="ignore")
     mocker.patch(
         "kubernetes.client.CustomObjectsApi.get_cluster_custom_object",
         return_value={"spec": {"domain": ""}},

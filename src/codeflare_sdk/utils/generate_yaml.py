@@ -49,11 +49,9 @@ def update_dashboard_route(route_item, cluster_name, namespace):
     metadata["name"] = f"ray-dashboard-{cluster_name}"
     metadata["namespace"] = namespace
     spec = route_item.get("generictemplate", {}).get("spec")
-    print(spec["rules"][0]["http"]["paths"][0]["backend"]["service"]["name"])
     spec["rules"][0]["http"]["paths"][0]["backend"]["service"][
         "name"
     ] = f"{cluster_name}-head-svc"
-    print(spec["rules"][0]["http"]["paths"][0]["backend"]["service"]["name"])
     try:
         config_check()
         api_client = client.CustomObjectsApi(api_config_handler())
@@ -73,7 +71,9 @@ def update_rayclient_route(route_item, cluster_name, namespace):
     metadata["namespace"] = namespace
     metadata["labels"]["odh-ray-cluster-service"] = f"{cluster_name}-head-svc"
     spec = route_item.get("generictemplate", {}).get("spec")
-    spec["to"]["name"] = f"{cluster_name}-head-svc"
+    spec["rules"][0]["http"]["paths"][0]["backend"]["service"][
+        "name"
+    ] = f"{cluster_name}-head-svc"
 
 
 def update_names(yaml, item, appwrapper_name, cluster_name, namespace):
@@ -306,7 +306,7 @@ def enable_local_interactive(resources, cluster_name, namespace):
         config_check()
         api_client = client.CustomObjectsApi(api_config_handler())
         ingress = api_client.get_cluster_custom_object(
-            "config.openshift.io", "v1", "ingresses", "cluster"
+            "networking.k8s.io", "v1", "ingresses", "cluster"
         )
     except Exception as e:  # pragma: no cover
         return _kube_api_error_handling(e)
