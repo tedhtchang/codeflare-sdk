@@ -44,11 +44,11 @@ def gen_names(name):
         return name, name
 
 
-def update_dashboard_route(route_item, cluster_name, namespace):
-    metadata = route_item.get("generictemplate", {}).get("metadata")
+def update_dashboard_ingress(ingress_item, cluster_name, namespace):
+    metadata = ingress_item.get("generictemplate", {}).get("metadata")
     metadata["name"] = f"ray-dashboard-{cluster_name}"
     metadata["namespace"] = namespace
-    spec = route_item.get("generictemplate", {}).get("spec")
+    spec = ingress_item.get("generictemplate", {}).get("spec")
     spec["rules"][0]["http"]["paths"][0]["backend"]["service"][
         "name"
     ] = f"{cluster_name}-head-svc"
@@ -64,16 +64,17 @@ def update_dashboard_route(route_item, cluster_name, namespace):
     spec["rules"][0]["host"] = f"ray-dashboard-{cluster_name}-{namespace}.{domain}"
 
 
-# ToDo: refactor the update_x_route() functions
-def update_rayclient_route(route_item, cluster_name, namespace):
-    metadata = route_item.get("generictemplate", {}).get("metadata")
-    metadata["name"] = f"rayclient-{cluster_name}"
+# ToDo: refactor the update_x_ingress() functions
+def update_rayclient_ingress(ingress_item, cluster_name, namespace, domain):
+    metadata = ingress_item.get("generictemplate", {}).get("metadata")
+    metadata["name"] = f"ray-client-{cluster_name}"
     metadata["namespace"] = namespace
     metadata["labels"]["odh-ray-cluster-service"] = f"{cluster_name}-head-svc"
-    spec = route_item.get("generictemplate", {}).get("spec")
+    spec = ingress_item.get("generictemplate", {}).get("spec")
     spec["rules"][0]["http"]["paths"][0]["backend"]["service"][
         "name"
     ] = f"{cluster_name}-head-svc"
+    spec["rules"][0]["host"] = f"ray-client-{cluster_name}-{namespace}.{domain}"
 
 
 def update_names(yaml, item, appwrapper_name, cluster_name, namespace):
@@ -277,10 +278,9 @@ def update_ca_secret(ca_secret_item, cluster_name, namespace):
 
 
 def enable_local_interactive(resources, cluster_name, namespace):
-    rayclient_route_item = resources["resources"].get("GenericItems")[2]
+    rayclient_ingress_item = resources["resources"].get("GenericItems")[2]
     ca_secret_item = resources["resources"].get("GenericItems")[3]
     item = resources["resources"].get("GenericItems")[0]
-    update_rayclient_route(rayclient_route_item, cluster_name, namespace)
     update_ca_secret(ca_secret_item, cluster_name, namespace)
     # update_ca_secret_volumes
     item["generictemplate"]["spec"]["headGroupSpec"]["template"]["spec"]["volumes"][0][
@@ -306,12 +306,13 @@ def enable_local_interactive(resources, cluster_name, namespace):
         config_check()
         api_client = client.CustomObjectsApi(api_config_handler())
         ingress = api_client.get_cluster_custom_object(
-            "networking.k8s.io", "v1", "ingresses", "cluster"
+            "config.openshift.io", "v1", "ingresses", "cluster"
         )
     except Exception as e:  # pragma: no cover
         return _kube_api_error_handling(e)
     domain = ingress["spec"]["domain"]
     command = command.replace("server-name", domain)
+    update_rayclient_ingress(rayclient_ingress_item, cluster_name, namespace, domain)
 
     item["generictemplate"]["spec"]["headGroupSpec"]["template"]["spec"][
         "initContainers"
@@ -408,7 +409,7 @@ def generate_appwrapper(
     appwrapper_name, cluster_name = gen_names(name)
     resources = user_yaml.get("spec", "resources")
     item = resources["resources"].get("GenericItems")[0]
-    route_item = resources["resources"].get("GenericItems")[1]
+    ingress_item = resources["resources"].get("GenericItems")[1]
     update_names(user_yaml, item, appwrapper_name, cluster_name, namespace)
     update_labels(user_yaml, instascale, instance_types)
     update_priority(user_yaml, item, dispatch_priority, priority_val)
@@ -441,7 +442,7 @@ def generate_appwrapper(
         head_memory,
         head_gpus,
     )
-    update_dashboard_route(route_item, cluster_name, namespace)
+    update_dashboard_ingress(ingress_item, cluster_name, namespace)
     if local_interactive:
         enable_local_interactive(resources, cluster_name, namespace)
     else:

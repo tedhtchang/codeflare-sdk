@@ -360,25 +360,6 @@ def test_rc_status(mocker):
     rc = _ray_cluster_status("test-rc", "test-ns")
     assert rc == None
 
-
-def uri_retreival(group, version, namespace, plural, *args):
-    assert group == "route.openshift.io"
-    assert version == "v1"
-    assert namespace == "ns"
-    assert plural == "routes"
-    assert args == tuple()
-    return {
-        "items": [
-            {
-                "metadata": {"name": "ray-dashboard-unit-test-cluster"},
-                "spec": {
-                    "host": "ray-dashboard-unit-test-cluster-ns.apps.cluster.awsroute.org"
-                },
-            }
-        ]
-    }
-
-
 def test_cluster_uris(mocker):
     mocker.patch("kubernetes.config.load_kube_config", return_value="ignore")
     mocker.patch(
@@ -403,7 +384,7 @@ def test_cluster_uris(mocker):
     cluster.config.name = "fake"
     assert (
         cluster.cluster_dashboard_uri()
-        == "Dashboard route not available yet, have you run cluster.up()?"
+        == "Dashboard ingress not available yet, have you run cluster.up()?"
     )
 
 
@@ -414,7 +395,7 @@ def test_local_client_url(mocker):
     )
     mocker.patch(
         "codeflare_sdk.cluster.cluster._get_ingress_domain",
-        return_value="apps.cluster.awsroute.org",
+        return_value="ray-client-unit-test-cluster-localinter-ns.apps.cluster.awsroute.org",
     )
     mocker.patch(
         "codeflare_sdk.cluster.cluster.Cluster.create_app_wrapper",
@@ -427,7 +408,7 @@ def test_local_client_url(mocker):
     cluster = Cluster(cluster_config)
     assert (
         cluster.local_client_url()
-        == "ray://rayclient-unit-test-cluster-localinter-ns.apps.cluster.awsroute.org"
+        == "ray://ray-client-unit-test-cluster-localinter-ns.apps.cluster.awsroute.org"
     )
 
 
