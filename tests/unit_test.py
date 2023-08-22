@@ -360,6 +360,7 @@ def test_rc_status(mocker):
     rc = _ray_cluster_status("test-rc", "test-ns")
     assert rc == None
 
+
 def test_cluster_uris(mocker):
     mocker.patch("kubernetes.config.load_kube_config", return_value="ignore")
     mocker.patch(
