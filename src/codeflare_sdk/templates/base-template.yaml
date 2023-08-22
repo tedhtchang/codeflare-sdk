@@ -296,7 +296,7 @@ spec:
           namespace: default
         spec:
           rules:
-            - host: placeholder
+            - host: ray-dashboard-raytest.<ingress-domain>
               http:
                 paths:
                   - path: /
@@ -317,7 +317,7 @@ spec:
             odh-ray-cluster-service: deployment-name-head-svc
         spec:
           rules:
-            - host: "localhost"
+            - host: ray-client-raytest.<ingress-domain>
               http:
                 paths:
                 - path: /

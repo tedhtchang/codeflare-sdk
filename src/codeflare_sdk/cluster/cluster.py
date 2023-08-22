@@ -332,30 +332,30 @@ class Cluster:
                 )
             ):
                 return f"http://{ingress.spec.rules[0].host}"
-        return "Dashboard route not available yet, have you run cluster.up()?"
+        return "Dashboard ingress not available yet, have you run cluster.up()?"
 
     def list_jobs(self) -> List:
         """
         This method accesses the head ray node in your cluster and lists the running jobs.
         """
-        dashboard_route = self.cluster_dashboard_uri()
-        client = JobSubmissionClient(dashboard_route)
+        dashboard_ingress = self.cluster_dashboard_uri()
+        client = JobSubmissionClient(dashboard_ingress)
         return client.list_jobs()
 
     def job_status(self, job_id: str) -> str:
         """
         This method accesses the head ray node in your cluster and returns the job status for the provided job id.
         """
-        dashboard_route = self.cluster_dashboard_uri()
-        client = JobSubmissionClient(dashboard_route)
+        dashboard_ingress = self.cluster_dashboard_uri()
+        client = JobSubmissionClient(dashboard_ingress)
         return client.get_job_status(job_id)
 
     def job_logs(self, job_id: str) -> str:
         """
         This method accesses the head ray node in your cluster and returns the logs for the provided job id.
         """
-        dashboard_route = self.cluster_dashboard_uri()
-        client = JobSubmissionClient(dashboard_route)
+        dashboard_ingress = self.cluster_dashboard_uri()
+        client = JobSubmissionClient(dashboard_ingress)
         return client.get_job_logs(job_id)
 
     def torchx_config(
@@ -417,7 +417,7 @@ class Cluster:
     def local_client_url(self):
         if self.config.local_interactive == True:
             ingress_domain = _get_ingress_domain()
-            return f"ray://rayclient-{self.config.name}-{self.config.namespace}.{ingress_domain}"
+            return f"ray://{ingress_domain}"
         else:
             return "None"
 
@@ -598,10 +598,10 @@ def _map_to_ray_cluster(rc) -> Optional[RayCluster]:
     api_instance = client.NetworkingV1Api(api_config_handler())
     ingresses = api_instance.list_namespaced_ingress(rc["metadata"]["namespace"])
 
-    ray_route = None
+    ray_ingress = None
     for ingress in ingresses.items:
         if ingress.metadata.name == f"ray-dashboard-{rc['metadata']['name']}":
-            ray_route = ingress.spec.rules[0].host
+            ray_ingress = ingress.spec.rules[0].host
 
     return RayCluster(
         name=rc["metadata"]["name"],
@@ -619,7 +619,6 @@ def _map_to_ray_cluster(rc) -> Optional[RayCluster]:
         ]["resources"]["limits"]["cpu"],
         worker_gpu=0,  # hard to detect currently how many gpus, can override it with what the user asked for
         namespace=rc["metadata"]["namespace"],
-        dashboard=ray_route,
         head_cpus=rc["spec"]["headGroupSpec"]["template"]["spec"]["containers"][0][
             "resources"
         ]["limits"]["cpu"],
@@ -629,6 +628,7 @@ def _map_to_ray_cluster(rc) -> Optional[RayCluster]:
         head_gpu=rc["spec"]["headGroupSpec"]["template"]["spec"]["containers"][0][
             "resources"
         ]["limits"]["nvidia.com/gpu"],
+        dashboard=ray_ingress,
     )
 
 
