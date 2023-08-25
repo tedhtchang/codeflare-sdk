@@ -313,22 +313,25 @@ spec:
         metadata:
           name: rayclient-deployment-name
           namespace: default
+          annotations:
+            route.openshift.io/termination: passthrough
+            nginx.ingress.kubernetes.io/ssl-passthrough: "true"
+            nginx.ingress.kubernetes.io/backend-protocol: "GRPC"
           labels:
             odh-ray-cluster-service: deployment-name-head-svc
         spec:
+          ingressClassName: openshift-default
           rules:
-            - host: ray-client-raytest.<ingress-domain>
+            - host: rayclient-raytest.<ingress-domain>
               http:
                 paths:
-                - path: /
-                  pathType: Prefix
+                - path: ''
+                  pathType: ImplementationSpecific
                   backend:
                     service:
-                      name: raycluster-tls-head-svc
+                      name: deployment-name-head-svc
                       port:
                         number: 10001
-                      tls:
-                        termination: passthrough
     - replicas: 1
       generictemplate:
         apiVersion: v1

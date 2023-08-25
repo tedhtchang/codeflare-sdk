@@ -396,7 +396,7 @@ def test_local_client_url(mocker):
     )
     mocker.patch(
         "codeflare_sdk.cluster.cluster._get_ingress_domain",
-        return_value="ray-client-unit-test-cluster-localinter-ns.apps.cluster.awsroute.org",
+        return_value="rayclient-unit-test-cluster-localinter-ns.apps.cluster.awsroute.org",
     )
     mocker.patch(
         "codeflare_sdk.cluster.cluster.Cluster.create_app_wrapper",
@@ -409,7 +409,7 @@ def test_local_client_url(mocker):
     cluster = Cluster(cluster_config)
     assert (
         cluster.local_client_url()
-        == "ray://ray-client-unit-test-cluster-localinter-ns.apps.cluster.awsroute.org"
+        == "ray://rayclient-unit-test-cluster-localinter-ns.apps.cluster.awsroute.org"
     )
 
 
