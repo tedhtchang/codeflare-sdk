@@ -67,14 +67,14 @@ def update_dashboard_ingress(ingress_item, cluster_name, namespace):
 # ToDo: refactor the update_x_ingress() functions
 def update_rayclient_ingress(ingress_item, cluster_name, namespace, domain):
     metadata = ingress_item.get("generictemplate", {}).get("metadata")
-    metadata["name"] = f"ray-client-{cluster_name}"
+    metadata["name"] = f"rayclient-{cluster_name}"
     metadata["namespace"] = namespace
     metadata["labels"]["odh-ray-cluster-service"] = f"{cluster_name}-head-svc"
     spec = ingress_item.get("generictemplate", {}).get("spec")
     spec["rules"][0]["http"]["paths"][0]["backend"]["service"][
         "name"
     ] = f"{cluster_name}-head-svc"
-    spec["rules"][0]["host"] = f"ray-client-{cluster_name}-{namespace}.{domain}"
+    spec["rules"][0]["host"] = f"rayclient-{cluster_name}-{namespace}.{domain}"
 
 
 def update_names(yaml, item, appwrapper_name, cluster_name, namespace):
