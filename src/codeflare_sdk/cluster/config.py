@@ -51,3 +51,5 @@ class ClusterConfiguration:
     local_interactive: bool = False
     image_pull_secrets: list = field(default_factory=list)
     dispatch_priority: str = None
+    ingress_options: dict = field(default_factory=dict)
+    ingress_domain: str = None

@@ -24,6 +24,8 @@ import uuid
 from kubernetes import client, config
 from .kube_api_helpers import _kube_api_error_handling
 from ..cluster.auth import api_config_handler, config_check
+from jinja2 import Template
+import pathlib
 
 
 def read_template(template):
@@ -44,37 +46,133 @@ def gen_names(name):
         return name, name
 
 
-def update_dashboard_ingress(ingress_item, cluster_name, namespace):
-    metadata = ingress_item.get("generictemplate", {}).get("metadata")
-    metadata["name"] = f"ray-dashboard-{cluster_name}"
-    metadata["namespace"] = namespace
-    spec = ingress_item.get("generictemplate", {}).get("spec")
-    spec["rules"][0]["http"]["paths"][0]["backend"]["service"][
-        "name"
-    ] = f"{cluster_name}-head-svc"
-    try:
-        config_check()
-        api_client = client.CustomObjectsApi(api_config_handler())
-        ingress = api_client.get_cluster_custom_object(
-            "config.openshift.io", "v1", "ingresses", "cluster"
-        )
-    except Exception as e:  # pragma: no cover
-        return _kube_api_error_handling(e)
-    domain = ingress["spec"]["domain"]
-    spec["rules"][0]["host"] = f"ray-dashboard-{cluster_name}-{namespace}.{domain}"
+def generate_default_ingresses(
+    cluster_name, namespace, ingress_domain, local_interactive
+):
+    dir = pathlib.Path(__file__).parent.parent.resolve()
+    with open(f"{dir}/templates/ingress-template.yaml", "r") as template_file:
+        ingress_template = Template(template_file.read())
+
+    # If the ingress domain is not specifically specified we can assume the user is on OpenShift
+    if ingress_domain is not None:
+        domain = ingress_domain
+        ingressClassName = "nginx"
+        annotations = {
+            "nginx.ingress.kubernetes.io/rewrite-target": "/",
+            "nginx.ingress.kubernetes.io/ssl-redirect": "true",
+        }
+    else:
+        # We can try get the domain through checking ingresses.config.openshift.io
+        try:
+            config_check()
+            api_client = client.CustomObjectsApi(api_config_handler())
+            ingress = api_client.get_cluster_custom_object(
+                "config.openshift.io", "v1", "ingresses", "cluster"
+            )
+        except Exception as e:  # pragma: no cover
+            return _kube_api_error_handling(e)
+        if len(ingress) != 0:
+            ingressClassName = "openshift-default"
+            annotations = {
+                "nginx.ingress.kubernetes.io/rewrite-target": "/",
+                "nginx.ingress.kubernetes.io/ssl-redirect": "true",
+                "route.openshift.io/termination": "passthrough",
+            }
+            domain = ingress["spec"]["domain"]
+        else:
+            return ValueError(
+                "ingressDomain is invalid For Kubernetes Clusters please specify an ingressDomain"
+            )
+
+    ingressOptions = {
+        "ingresses": [
+            {
+                "ingressName": f"ray-dashboard-ingress-{cluster_name}-{namespace}",
+                "port": 8265,
+                "pathType": "Prefix",
+                "path": "/",
+                "host": f"ray-dashboard-{cluster_name}-{namespace}.{domain}",
+                "annotations": {},
+            },
+        ]
+    }
+    # If local interactive is not set we will ignore the second ingress
+    if local_interactive:
+        client_ing_options = {
+            "ingressName": f"ray-client-ingress-{cluster_name}-{namespace}",
+            "port": 10001,
+            "pathType": "ImplementationSpecific",
+            "path": "",
+            "host": f"ray-client-{cluster_name}-{namespace}.{domain}",
+            "annotations": f"{annotations}",
+            "ingressClassName": f"{ingressClassName}",
+        }
+        ingressOptions["ingresses"].append(client_ing_options)
+
+    for ingress_option in ingressOptions["ingresses"]:
+        ingress_option["serviceName"] = f"{cluster_name}-head-svc"
+        rendered_yaml = ingress_template.render(ingress_option)
+        try:
+            config_check()
+            api_client = client.CustomObjectsApi(api_config_handler())
+            api_client.create_namespaced_custom_object(
+                group="networking.k8s.io",
+                version="v1",
+                namespace=namespace,
+                plural="ingresses",
+                body=yaml.safe_load(rendered_yaml),
+            )
+        except Exception as e:
+            print(
+                f"Error creating Ingress resource {ingress_option['ingressName']}: {str(e)}"
+            )
 
 
-# ToDo: refactor the update_x_ingress() functions
-def update_rayclient_ingress(ingress_item, cluster_name, namespace, domain):
-    metadata = ingress_item.get("generictemplate", {}).get("metadata")
-    metadata["name"] = f"rayclient-{cluster_name}"
-    metadata["namespace"] = namespace
-    metadata["labels"]["odh-ray-cluster-service"] = f"{cluster_name}-head-svc"
-    spec = ingress_item.get("generictemplate", {}).get("spec")
-    spec["rules"][0]["http"]["paths"][0]["backend"]["service"][
-        "name"
-    ] = f"{cluster_name}-head-svc"
-    spec["rules"][0]["host"] = f"rayclient-{cluster_name}-{namespace}.{domain}"
+def generate_custom_ingresses(ingress_options, namespace, cluster_name):
+    dir = pathlib.Path(__file__).parent.parent.resolve()
+    with open(f"{dir}/templates/ingress-template.yaml", "r") as template_file:
+        ingress_template = Template(template_file.read())
+
+    for index, ingress_option in enumerate(ingress_options["ingresses"]):
+        if "ingressName" not in ingress_option.keys():
+            return ValueError(
+                f"Error: 'ingressName' is missing or empty for ingress item at index {index}"
+            )
+        if "port" not in ingress_option.keys():
+            return ValueError(
+                f"Error: 'port' is missing or empty for ingress item at index {index}"
+            )
+        elif not isinstance(ingress_option["port"], int):
+            return ValueError(
+                f"Error: 'port' is not of type int for ingress item at index {index}"
+            )
+        if "annotations" not in ingress_option.keys():
+            ingress_option["annotations"] = {}
+        if "path" not in ingress_option.keys():
+            ingress_option["path"] = None
+        if "pathType" not in ingress_option.keys():
+            ingress_option["pathType"] = "ImplementationSpecific"
+        if "host" not in ingress_option.keys():
+            ingress_option["host"] = None
+        if "ingressClassName" not in ingress_option.keys():
+            ingress_options["ingressClassName"] = None
+
+        ingress_option["serviceName"] = f"{cluster_name}-head-svc"
+        rendered_yaml = ingress_template.render(ingress_option)
+        try:
+            config_check()
+            api_client = client.CustomObjectsApi(api_config_handler())
+            api_client.create_namespaced_custom_object(
+                group="networking.k8s.io",
+                version="v1",
+                namespace=namespace,
+                plural="ingresses",
+                body=yaml.safe_load(rendered_yaml),
+            )
+        except Exception as e:
+            print(
+                f"Error creating Ingress resource {ingress_option['ingressName']}: {str(e)}"
+            )
 
 
 def update_names(yaml, item, appwrapper_name, cluster_name, namespace):
@@ -277,9 +375,8 @@ def update_ca_secret(ca_secret_item, cluster_name, namespace):
     data["ca.key"], data["ca.crt"] = generate_cert.generate_ca_cert(365)
 
 
-def enable_local_interactive(resources, cluster_name, namespace):
-    rayclient_ingress_item = resources["resources"].get("GenericItems")[2]
-    ca_secret_item = resources["resources"].get("GenericItems")[3]
+def enable_local_interactive(resources, cluster_name, namespace, ingress_domain):
+    ca_secret_item = resources["resources"].get("GenericItems")[1]
     item = resources["resources"].get("GenericItems")[0]
     update_ca_secret(ca_secret_item, cluster_name, namespace)
     # update_ca_secret_volumes
@@ -302,21 +399,32 @@ def enable_local_interactive(resources, cluster_name, namespace):
     ][0].get("command")[2]
 
     command = command.replace("deployment-name", cluster_name)
-    try:
-        config_check()
-        api_client = client.CustomObjectsApi(api_config_handler())
-        ingress = api_client.get_cluster_custom_object(
-            "config.openshift.io", "v1", "ingresses", "cluster"
-        )
-    except Exception as e:  # pragma: no cover
-        return _kube_api_error_handling(e)
-    domain = ingress["spec"]["domain"]
-    command = command.replace("server-name", domain)
-    update_rayclient_ingress(rayclient_ingress_item, cluster_name, namespace, domain)
+
+    if ingress_domain is not None:
+        domain = ingress_domain
+    else:
+        # We can try get the domain through checking ingresses.config.openshift.io
+        try:
+            config_check()
+            api_client = client.CustomObjectsApi(api_config_handler())
+            ingress = api_client.get_cluster_custom_object(
+                "config.openshift.io", "v1", "ingresses", "cluster"
+            )
+        except Exception as e:  # pragma: no cover
+            return _kube_api_error_handling(e)
+        if len(ingress) != 0:
+            domain = ingress["spec"]["domain"]
+        else:
+            return ValueError(
+                "ingressDomain is invalid. For Kubernetes Clusters please specify an ingressDomain"
+            )
 
     item["generictemplate"]["spec"]["headGroupSpec"]["template"]["spec"][
         "initContainers"
     ][0].get("command")[2] = command
+
+    domain = ingress["spec"]["domain"]
+    command = command.replace("server-name", domain)
 
 
 def disable_raycluster_tls(resources):
@@ -404,12 +512,12 @@ def generate_appwrapper(
     image_pull_secrets: list,
     dispatch_priority: str,
     priority_val: int,
+    ingress_domain: str,
 ):
     user_yaml = read_template(template)
     appwrapper_name, cluster_name = gen_names(name)
     resources = user_yaml.get("spec", "resources")
     item = resources["resources"].get("GenericItems")[0]
-    ingress_item = resources["resources"].get("GenericItems")[1]
     update_names(user_yaml, item, appwrapper_name, cluster_name, namespace)
     update_labels(user_yaml, instascale, instance_types)
     update_priority(user_yaml, item, dispatch_priority, priority_val)
@@ -442,9 +550,8 @@ def generate_appwrapper(
         head_memory,
         head_gpus,
     )
-    update_dashboard_ingress(ingress_item, cluster_name, namespace)
     if local_interactive:
-        enable_local_interactive(resources, cluster_name, namespace)
+        enable_local_interactive(resources, cluster_name, namespace, ingress_domain)
     else:
         disable_raycluster_tls(resources["resources"])
     outfile = appwrapper_name + ".yaml"
