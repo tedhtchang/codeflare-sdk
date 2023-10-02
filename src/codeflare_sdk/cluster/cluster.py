@@ -25,7 +25,11 @@ from ray.job_submission import JobSubmissionClient
 
 from .auth import config_check, api_config_handler
 from ..utils import pretty_print
-from ..utils.generate_yaml import generate_appwrapper
+from ..utils.generate_yaml import (
+    generate_appwrapper,
+    generate_custom_ingresses,
+    generate_default_ingresses,
+)
 from ..utils.kube_api_helpers import _kube_api_error_handling
 from .config import ClusterConfiguration
 from .model import (
@@ -126,6 +130,7 @@ class Cluster:
         local_interactive = self.config.local_interactive
         image_pull_secrets = self.config.image_pull_secrets
         dispatch_priority = self.config.dispatch_priority
+        ingress_domain = self.config.ingress_domain
         return generate_appwrapper(
             name=name,
             namespace=namespace,
@@ -147,6 +152,7 @@ class Cluster:
             image_pull_secrets=image_pull_secrets,
             dispatch_priority=dispatch_priority,
             priority_val=priority_val,
+            ingress_domain=ingress_domain,
         )
 
     # creates a new cluster with the provided or default spec
@@ -168,6 +174,18 @@ class Cluster:
                 plural="appwrappers",
                 body=aw,
             )
+            if self.config.ingress_options != {}:
+                generate_custom_ingresses(
+                    self.config.ingress_options, namespace, self.config.name
+                )
+            else:
+                generate_default_ingresses(
+                    self.config.name,
+                    namespace,
+                    self.config.ingress_domain,
+                    self.config.local_interactive,
+                )
+
         except Exception as e:  # pragma: no cover
             return _kube_api_error_handling(e)
 
@@ -189,6 +207,12 @@ class Cluster:
             )
         except Exception as e:  # pragma: no cover
             return _kube_api_error_handling(e)
+        _delete_generated_ingresses(
+            self.config.ingress_options,
+            namespace,
+            self.config.name,
+            self.config.local_interactive,
+        )
 
     def status(
         self, print_to_console: bool = True
@@ -325,12 +349,7 @@ class Cluster:
             return _kube_api_error_handling(e)
 
         for ingress in ingresses.items:
-            if (
-                ingress.metadata.name == f"ray-dashboard-{self.config.name}"
-                and ingress.spec.rules[0].host.startswith(
-                    f"ray-dashboard-{self.config.name}"
-                )
-            ):
+            if ingress.spec.rules[0].http.paths[0].backend.service.port.number == 8265:
                 return f"http://{ingress.spec.rules[0].host}"
         return "Dashboard ingress not available yet, have you run cluster.up()?"
 
@@ -493,14 +512,44 @@ def get_cluster(cluster_name: str, namespace: str = "default"):
 
 
 # private methods
+def _delete_generated_ingresses(
+    ingress_options, namespace, clusterName, local_interactive
+):
+    ingressNames = []
+    if ingress_options != {}:
+        for ingress_option in ingress_options["ingresses"]:
+            ingressNames.append(ingress_option["ingressName"])
+    else:
+        ingressNames.append(f"ray-dashboard-ingress-{clusterName}-{namespace}")
+        if local_interactive:
+            ingressNames.append(f"ray-client-ingress-{clusterName}-{namespace}")
+
+    config_check()
+    api_client = client.CustomObjectsApi(api_config_handler())
+    for ingressName in ingressNames:
+        try:
+            api_client.delete_namespaced_custom_object(
+                group="networking.k8s.io",
+                version="v1",
+                namespace=namespace,
+                plural="ingresses",
+                name=ingressName,
+            )
+        except Exception as e:
+            print(f"Error deleting Ingress resource: {str(e)}")
+
+
 def _get_ingress_domain():
     try:
         config_check()   
         api_client = client.NetworkingV1Api(api_config_handler())
-        ingress = api_client.list_namespaced_ingress(get_current_namespace())
+        ingresses = api_client.list_namespaced_ingress(get_current_namespace())
     except Exception as e:  # pragma: no cover
         return _kube_api_error_handling(e)
-    domain = ingress.items[1].spec.rules[0].host
+    domain = None
+    for ingress in ingresses.items:
+        if ingress.spec.rules[0].http.paths[0].backend.service.port.number == 10001:
+            domain = ingress.spec.rules[0].host
     return domain
 
 

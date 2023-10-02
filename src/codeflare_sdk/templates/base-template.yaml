@@ -289,51 +289,6 @@ spec:
                   emptyDir: {}
     - replicas: 1
       generictemplate:
-        apiVersion: networking.k8s.io/v1
-        kind: Ingress
-        metadata:
-          name: ray-dashboard-raytest
-          namespace: default
-        spec:
-          rules:
-            - host: ray-dashboard-raytest.<ingress-domain>
-              http:
-                paths:
-                  - path: /
-                    pathType: Prefix
-                    backend:
-                      service:
-                        name: raytest-head-svc
-                        port:
-                          number: 8265
-    - replicas: 1
-      generictemplate:
-        apiVersion: networking.k8s.io/v1
-        kind: Ingress
-        metadata:
-          name: rayclient-deployment-name
-          namespace: default
-          annotations:
-            route.openshift.io/termination: passthrough
-            nginx.ingress.kubernetes.io/ssl-passthrough: "true"
-            nginx.ingress.kubernetes.io/backend-protocol: "GRPC"
-          labels:
-            odh-ray-cluster-service: deployment-name-head-svc
-        spec:
-          ingressClassName: openshift-default
-          rules:
-            - host: rayclient-raytest.<ingress-domain>
-              http:
-                paths:
-                - path: ''
-                  pathType: ImplementationSpecific
-                  backend:
-                    service:
-                      name: deployment-name-head-svc
-                      port:
-                        number: 10001
-    - replicas: 1
-      generictemplate:
         apiVersion: v1
         data:
           ca.crt: generated_crt
