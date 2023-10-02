@@ -99,11 +99,11 @@ def generate_default_ingresses(
     # If local interactive is not set we will ignore the second ingress
     if local_interactive:
         client_ing_options = {
-            "ingressName": f"ray-client-ingress-{cluster_name}-{namespace}",
+            "ingressName": f"rayclient-ingress-{cluster_name}-{namespace}",
             "port": 10001,
             "pathType": "ImplementationSpecific",
             "path": "",
-            "host": f"ray-client-{cluster_name}-{namespace}.{domain}",
+            "host": f"rayclient-{cluster_name}-{namespace}.{domain}",
             "annotations": f"{annotations}",
             "ingressClassName": f"{ingressClassName}",
         }
@@ -419,12 +419,12 @@ def enable_local_interactive(resources, cluster_name, namespace, ingress_domain)
                 "ingressDomain is invalid. For Kubernetes Clusters please specify an ingressDomain"
             )
 
+    domain = ingress["spec"]["domain"]
+    command = command.replace("server-name", domain)
     item["generictemplate"]["spec"]["headGroupSpec"]["template"]["spec"][
         "initContainers"
     ][0].get("command")[2] = command
 
-    domain = ingress["spec"]["domain"]
-    command = command.replace("server-name", domain)
 
 
 def disable_raycluster_tls(resources):

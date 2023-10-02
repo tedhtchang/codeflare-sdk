@@ -522,7 +522,7 @@ def _delete_generated_ingresses(
     else:
         ingressNames.append(f"ray-dashboard-ingress-{clusterName}-{namespace}")
         if local_interactive:
-            ingressNames.append(f"ray-client-ingress-{clusterName}-{namespace}")
+            ingressNames.append(f"rayclient-ingress-{clusterName}-{namespace}")
 
     config_check()
     api_client = client.CustomObjectsApi(api_config_handler())
@@ -541,7 +541,7 @@ def _delete_generated_ingresses(
 
 def _get_ingress_domain():
     try:
-        config_check()   
+        config_check()
         api_client = client.NetworkingV1Api(api_config_handler())
         ingresses = api_client.list_namespaced_ingress(get_current_namespace())
     except Exception as e:  # pragma: no cover
@@ -649,7 +649,7 @@ def _map_to_ray_cluster(rc) -> Optional[RayCluster]:
 
     ray_ingress = None
     for ingress in ingresses.items:
-        if ingress.metadata.name == f"ray-dashboard-{rc['metadata']['name']}":
+        if ingress.spec.rules[0].http.paths[0].backend.service.port.number == 8265:
             ray_ingress = ingress.spec.rules[0].host
 
     return RayCluster(
