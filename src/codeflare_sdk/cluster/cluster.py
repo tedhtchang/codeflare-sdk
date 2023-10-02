@@ -649,7 +649,7 @@ def _map_to_ray_cluster(rc) -> Optional[RayCluster]:
 
     ray_ingress = None
     for ingress in ingresses.items:
-        if ingress.metadata.name == f"ray-dashboard-{rc['metadata']['name']}":
+        if ingress.spec.rules[0].http.paths[0].backend.service.port.number == 8265:
             ray_ingress = ingress.spec.rules[0].host
 
     return RayCluster(
