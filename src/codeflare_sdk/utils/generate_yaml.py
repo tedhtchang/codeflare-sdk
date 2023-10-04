@@ -50,7 +50,7 @@ def generate_default_ingresses(
     cluster_name, namespace, ingress_domain, local_interactive
 ):  # pragma: no cover
     dir = pathlib.Path(__file__).parent.parent.resolve()
-    with open(f"{dir}/templates/ingress-template.yaml", "r") as template_file:
+    with open(f"{dir}/templates/ingress-template.yaml.tmpl", "r") as template_file:
         ingress_template = Template(template_file.read())
 
     # If the ingress domain is not specifically specified we can assume the user is on OpenShift
@@ -132,7 +132,7 @@ def generate_custom_ingresses(
     ingress_options, namespace, cluster_name
 ):  # pragma: no cover
     dir = pathlib.Path(__file__).parent.parent.resolve()
-    with open(f"{dir}/templates/ingress-template.yaml", "r") as template_file:
+    with open(f"{dir}/templates/ingress-template.yaml.tmpl", "r") as template_file:
         ingress_template = Template(template_file.read())
 
     for index, ingress_option in enumerate(ingress_options["ingresses"]):
