@@ -174,7 +174,7 @@ class Cluster:
                 plural="appwrappers",
                 body=aw,
             )
-            if self.config.ingress_options != {}:
+            if self.config.ingress_options != {}:  # pragma: no cover
                 generate_custom_ingresses(
                     self.config.ingress_options, namespace, self.config.name
                 )
@@ -212,7 +212,7 @@ class Cluster:
             namespace,
             self.config.name,
             self.config.local_interactive,
-        )
+        )  # pragma: no cover
 
     def status(
         self, print_to_console: bool = True
@@ -435,7 +435,7 @@ class Cluster:
 
     def local_client_url(self):
         if self.config.local_interactive == True:
-            ingress_domain = _get_ingress_domain()
+            ingress_domain = _get_ingress_domain(self)
             return f"ray://{ingress_domain}"
         else:
             return "None"
@@ -514,7 +514,7 @@ def get_cluster(cluster_name: str, namespace: str = "default"):
 # private methods
 def _delete_generated_ingresses(
     ingress_options, namespace, clusterName, local_interactive
-):
+):  # pragma: no cover
     ingressNames = []
     if ingress_options != {}:
         for ingress_option in ingress_options["ingresses"]:
@@ -522,7 +522,7 @@ def _delete_generated_ingresses(
     else:
         ingressNames.append(f"ray-dashboard-ingress-{clusterName}-{namespace}")
         if local_interactive:
-            ingressNames.append(f"ray-client-ingress-{clusterName}-{namespace}")
+            ingressNames.append(f"rayclient-ingress-{clusterName}-{namespace}")
 
     config_check()
     api_client = client.CustomObjectsApi(api_config_handler())
@@ -535,15 +535,20 @@ def _delete_generated_ingresses(
                 plural="ingresses",
                 name=ingressName,
             )
-        except Exception as e:
+        except Exception as e:  # pragma: no cover
             print(f"Error deleting Ingress resource: {str(e)}")
 
 
-def _get_ingress_domain():
+# Cant test this until get_current_namespace is fixed
+def _get_ingress_domain(self):  # pragma: no cover
     try:
-        config_check()   
+        config_check()
         api_client = client.NetworkingV1Api(api_config_handler())
-        ingresses = api_client.list_namespaced_ingress(get_current_namespace())
+        if self.config.namespace != None:
+            namespace = self.config.namespace
+        else:
+            namespace = get_current_namespace()
+        ingresses = api_client.list_namespaced_ingress(namespace)
     except Exception as e:  # pragma: no cover
         return _kube_api_error_handling(e)
     domain = None

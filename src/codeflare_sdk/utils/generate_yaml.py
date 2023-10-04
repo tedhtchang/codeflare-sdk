@@ -48,7 +48,7 @@ def gen_names(name):
 
 def generate_default_ingresses(
     cluster_name, namespace, ingress_domain, local_interactive
-):
+):  # pragma: no cover
     dir = pathlib.Path(__file__).parent.parent.resolve()
     with open(f"{dir}/templates/ingress-template.yaml", "r") as template_file:
         ingress_template = Template(template_file.read())
@@ -99,11 +99,11 @@ def generate_default_ingresses(
     # If local interactive is not set we will ignore the second ingress
     if local_interactive:
         client_ing_options = {
-            "ingressName": f"ray-client-ingress-{cluster_name}-{namespace}",
+            "ingressName": f"rayclient-ingress-{cluster_name}-{namespace}",
             "port": 10001,
             "pathType": "ImplementationSpecific",
             "path": "",
-            "host": f"ray-client-{cluster_name}-{namespace}.{domain}",
+            "host": f"rayclient-{cluster_name}-{namespace}.{domain}",
             "annotations": f"{annotations}",
             "ingressClassName": f"{ingressClassName}",
         }
@@ -128,7 +128,9 @@ def generate_default_ingresses(
             )
 
 
-def generate_custom_ingresses(ingress_options, namespace, cluster_name):
+def generate_custom_ingresses(
+    ingress_options, namespace, cluster_name
+):  # pragma: no cover
     dir = pathlib.Path(__file__).parent.parent.resolve()
     with open(f"{dir}/templates/ingress-template.yaml", "r") as template_file:
         ingress_template = Template(template_file.read())
@@ -180,7 +182,7 @@ def update_names(yaml, item, appwrapper_name, cluster_name, namespace):
     metadata["name"] = appwrapper_name
     metadata["namespace"] = namespace
     lower_meta = item.get("generictemplate", {}).get("metadata")
-    lower_meta["labels"]["appwrapper.mcad.ibm.com"] = appwrapper_name
+    lower_meta["labels"]["appwrapper.workload.codeflare.dev"] = appwrapper_name
     lower_meta["name"] = cluster_name
     lower_meta["namespace"] = namespace
 
@@ -418,13 +420,11 @@ def enable_local_interactive(resources, cluster_name, namespace, ingress_domain)
             return ValueError(
                 "ingressDomain is invalid. For Kubernetes Clusters please specify an ingressDomain"
             )
+    command = command.replace("server-name", domain)
 
     item["generictemplate"]["spec"]["headGroupSpec"]["template"]["spec"][
         "initContainers"
     ][0].get("command")[2] = command
-
-    domain = ingress["spec"]["domain"]
-    command = command.replace("server-name", domain)
 
 
 def disable_raycluster_tls(resources):

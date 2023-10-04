@@ -32,7 +32,7 @@ spec:
         kind: RayCluster
         metadata:
           labels:
-            appwrapper.mcad.ibm.com: unit-test-cluster
+            appwrapper.workload.codeflare.dev: unit-test-cluster
             controller-tools.k8s.io: '1.0'
           name: unit-test-cluster
           namespace: ns
@@ -175,24 +175,5 @@ spec:
                     do echo waiting for myservice; sleep 2; done
                   image: busybox:1.28
                   name: init-myservice
-      replicas: 1
-    - generictemplate:
-        apiVersion: networking.k8s.io/v1
-        kind: Ingress
-        metadata:
-          name: ray-dashboard-unit-test-cluster
-          namespace: ns
-        spec:
-          rules:
-          - host: ray-dashboard-unit-test-cluster-ns.
-            http:
-              paths:
-              - backend:
-                  service:
-                    name: unit-test-cluster-head-svc
-                    port:
-                      number: 8265
-                path: /
-                pathType: Prefix
       replicas: 1
     Items: []

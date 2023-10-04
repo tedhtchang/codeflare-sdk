@@ -33,7 +33,7 @@ spec:
         kind: RayCluster
         metadata:
           labels:
-            appwrapper.mcad.ibm.com: prio-test-cluster
+            appwrapper.workload.codeflare.dev: prio-test-cluster
             controller-tools.k8s.io: '1.0'
           name: prio-test-cluster
           namespace: ns
@@ -178,20 +178,5 @@ spec:
                   image: busybox:1.28
                   name: init-myservice
                 priorityClassName: default
-      replicas: 1
-    - generictemplate:
-        apiVersion: route.openshift.io/v1
-        kind: Route
-        metadata:
-          labels:
-            odh-ray-cluster-service: prio-test-cluster-head-svc
-          name: ray-dashboard-prio-test-cluster
-          namespace: ns
-        spec:
-          port:
-            targetPort: dashboard
-          to:
-            kind: Service
-            name: prio-test-cluster-head-svc
       replicas: 1
     Items: []
