@@ -60,6 +60,7 @@ def generate_default_ingresses(
         annotations = {
             "nginx.ingress.kubernetes.io/rewrite-target": "/",
             "nginx.ingress.kubernetes.io/ssl-redirect": "true",
+            "nginx.ingress.kubernetes.io/ssl-passthrough": "true",
         }
     else:
         # We can try get the domain through checking ingresses.config.openshift.io
