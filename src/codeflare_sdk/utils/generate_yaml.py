@@ -46,6 +46,24 @@ def gen_names(name):
         return name, name
 
 
+# Check if the ingress api cluster resource exists
+def is_openshift_cluster():
+    try:
+        config_check()
+        api_instance = client.CustomObjectsApi(api_config_handler())
+        api_instance.get_cluster_custom_object(
+            "config.openshift.io", "v1", "ingresses", "cluster"
+        )
+
+        return True
+    except client.ApiException as e:
+        if e.status == 404:
+            return False
+        else:
+            print(f"Error detecting cluster type defaulting to Kubernetes: {e}")
+            return False
+
+
 def generate_default_ingresses(
     cluster_name, namespace, ingress_domain, local_interactive
 ):  # pragma: no cover
@@ -53,17 +71,7 @@ def generate_default_ingresses(
     with open(f"{dir}/templates/ingress-template.yaml.tmpl", "r") as template_file:
         ingress_template = Template(template_file.read())
 
-    # If the ingress domain is not specifically specified we can assume the user is on OpenShift
-    if ingress_domain is not None:
-        domain = ingress_domain
-        ingressClassName = "nginx"
-        annotations = {
-            "nginx.ingress.kubernetes.io/rewrite-target": "/",
-            "nginx.ingress.kubernetes.io/ssl-redirect": "true",
-            "nginx.ingress.kubernetes.io/ssl-passthrough": "true",
-        }
-    else:
-        # We can try get the domain through checking ingresses.config.openshift.io
+    if is_openshift_cluster():
         try:
             config_check()
             api_client = client.CustomObjectsApi(api_config_handler())
@@ -72,18 +80,26 @@ def generate_default_ingresses(
             )
         except Exception as e:  # pragma: no cover
             return _kube_api_error_handling(e)
-        if len(ingress) != 0:
-            ingressClassName = "openshift-default"
-            annotations = {
-                "nginx.ingress.kubernetes.io/rewrite-target": "/",
-                "nginx.ingress.kubernetes.io/ssl-redirect": "true",
-                "route.openshift.io/termination": "passthrough",
-            }
-            domain = ingress["spec"]["domain"]
-        else:
-            return ValueError(
-                "ingressDomain is invalid For Kubernetes Clusters please specify an ingressDomain"
-            )
+
+        ingressClassName = "openshift-default"
+        annotations = {
+            "nginx.ingress.kubernetes.io/rewrite-target": "/",
+            "nginx.ingress.kubernetes.io/ssl-redirect": "true",
+            "route.openshift.io/termination": "passthrough",
+        }
+        domain = ingress["spec"]["domain"]
+    elif ingress_domain is None:
+        raise ValueError(
+            "ingress_domain is invalid. For Kubernetes Clusters please specify an ingress domain"
+        )
+    else:
+        domain = ingress_domain
+        ingressClassName = "nginx"
+        annotations = {
+            "nginx.ingress.kubernetes.io/rewrite-target": "/",
+            "nginx.ingress.kubernetes.io/ssl-redirect": "true",
+            "nginx.ingress.kubernetes.io/ssl-passthrough": "true",
+        }
 
     ingressOptions = {
         "ingresses": [
@@ -403,9 +419,7 @@ def enable_local_interactive(resources, cluster_name, namespace, ingress_domain)
 
     command = command.replace("deployment-name", cluster_name)
 
-    if ingress_domain is not None:
-        domain = ingress_domain
-    else:
+    if is_openshift_cluster():
         # We can try get the domain through checking ingresses.config.openshift.io
         try:
             config_check()
@@ -415,12 +429,14 @@ def enable_local_interactive(resources, cluster_name, namespace, ingress_domain)
             )
         except Exception as e:  # pragma: no cover
             return _kube_api_error_handling(e)
-        if len(ingress) != 0:
-            domain = ingress["spec"]["domain"]
-        else:
-            return ValueError(
-                "ingressDomain is invalid. For Kubernetes Clusters please specify an ingressDomain"
-            )
+        domain = ingress["spec"]["domain"]
+    elif ingress_domain is None:
+        raise ValueError(
+            "ingress_domain is invalid. For Kubernetes Clusters please specify an ingress domain"
+        )
+    else:
+        domain = ingress_domain
+
     command = command.replace("server-name", domain)
 
     item["generictemplate"]["spec"]["headGroupSpec"]["template"]["spec"][
