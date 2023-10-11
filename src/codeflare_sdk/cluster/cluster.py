@@ -131,6 +131,7 @@ class Cluster:
         image_pull_secrets = self.config.image_pull_secrets
         dispatch_priority = self.config.dispatch_priority
         ingress_domain = self.config.ingress_domain
+        ingress_options = self.config.ingress_options
         return generate_appwrapper(
             name=name,
             namespace=namespace,
@@ -153,6 +154,7 @@ class Cluster:
             dispatch_priority=dispatch_priority,
             priority_val=priority_val,
             ingress_domain=ingress_domain,
+            ingress_options=ingress_options,
         )
 
     # creates a new cluster with the provided or default spec
@@ -174,17 +176,6 @@ class Cluster:
                 plural="appwrappers",
                 body=aw,
             )
-            if self.config.ingress_options != {}:  # pragma: no cover
-                generate_custom_ingresses(
-                    self.config.ingress_options, namespace, self.config.name
-                )
-            else:
-                generate_default_ingresses(
-                    self.config.name,
-                    namespace,
-                    self.config.ingress_domain,
-                    self.config.local_interactive,
-                )
 
         except Exception as e:  # pragma: no cover
             return _kube_api_error_handling(e)
@@ -207,12 +198,6 @@ class Cluster:
             )
         except Exception as e:  # pragma: no cover
             return _kube_api_error_handling(e)
-        _delete_generated_ingresses(
-            self.config.ingress_options,
-            namespace,
-            self.config.name,
-            self.config.local_interactive,
-        )  # pragma: no cover
 
     def status(
         self, print_to_console: bool = True
@@ -512,31 +497,6 @@ def get_cluster(cluster_name: str, namespace: str = "default"):
 
 
 # private methods
-def _delete_generated_ingresses(
-    ingress_options, namespace, clusterName, local_interactive
-):  # pragma: no cover
-    ingressNames = []
-    if ingress_options != {}:
-        for ingress_option in ingress_options["ingresses"]:
-            ingressNames.append(ingress_option["ingressName"])
-    else:
-        ingressNames.append(f"ray-dashboard-ingress-{clusterName}-{namespace}")
-        if local_interactive:
-            ingressNames.append(f"rayclient-ingress-{clusterName}-{namespace}")
-
-    config_check()
-    api_client = client.CustomObjectsApi(api_config_handler())
-    for ingressName in ingressNames:
-        try:
-            api_client.delete_namespaced_custom_object(
-                group="networking.k8s.io",
-                version="v1",
-                namespace=namespace,
-                plural="ingresses",
-                name=ingressName,
-            )
-        except Exception as e:  # pragma: no cover
-            print(f"Error deleting Ingress resource: {str(e)}")
 
 
 # Cant test this until get_current_namespace is fixed
