@@ -27,8 +27,6 @@ from .auth import config_check, api_config_handler
 from ..utils import pretty_print
 from ..utils.generate_yaml import (
     generate_appwrapper,
-    generate_custom_ingresses,
-    generate_default_ingresses,
 )
 from ..utils.kube_api_helpers import _kube_api_error_handling
 from .config import ClusterConfiguration

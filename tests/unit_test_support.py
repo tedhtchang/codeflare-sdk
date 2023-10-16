@@ -46,6 +46,7 @@ def createClusterConfig():
         instascale=True,
         machine_types=["cpu.small", "gpu.large"],
         image_pull_secrets=["unit-test-pull-secret"],
+        ingress_domain="apps.cluster.awsroute.org",
     )
     return config
 

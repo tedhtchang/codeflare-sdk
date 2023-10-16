@@ -75,9 +75,7 @@ from unit_test_support import (
     createDDPJob_with_cluster,
 )
 
-from codeflare_sdk.utils.generate_yaml import (
-    gen_names,
-)
+from codeflare_sdk.utils.generate_yaml import gen_names, is_openshift_cluster
 
 import openshift
 from openshift.selector import Selector
@@ -437,6 +435,16 @@ def test_local_client_url(mocker):
         cluster.local_client_url()
         == "ray://rayclient-unit-test-cluster-localinter-ns.apps.cluster.awsroute.org"
     )
+
+
+def test_is_openshift_cluster(mocker):
+    mocker.patch("kubernetes.config.load_kube_config", return_value="ignore")
+    assert is_openshift_cluster() == False
+    mocker.patch(
+        "kubernetes.client.CustomObjectsApi.get_cluster_custom_object",
+        return_value={"spec": {"domain": ""}},
+    )
+    assert is_openshift_cluster() == True
 
 
 def ray_addr(self, *args):

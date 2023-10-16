@@ -24,8 +24,6 @@ import uuid
 from kubernetes import client, config
 from .kube_api_helpers import _kube_api_error_handling
 from ..cluster.auth import api_config_handler, config_check
-from jinja2 import Template
-import pathlib
 
 
 def read_template(template):
@@ -56,8 +54,8 @@ def is_openshift_cluster():
         )
 
         return True
-    except client.ApiException as e:
-        if e.status == 404:
+    except client.ApiException as e:  # pragma: no cover
+        if e.status == 404 or e.status == 403:
             return False
         else:
             print(f"Error detecting cluster type defaulting to Kubernetes: {e}")
@@ -66,21 +64,21 @@ def is_openshift_cluster():
 
 def update_dashboard_ingress(
     ingress_item, cluster_name, namespace, ingress_options, ingress_domain
-):
+):  # pragma: no cover
     metadata = ingress_item.get("generictemplate", {}).get("metadata")
     spec = ingress_item.get("generictemplate", {}).get("spec")
     if ingress_options != {}:
         for index, ingress_option in enumerate(ingress_options["ingresses"]):
             if "ingressName" not in ingress_option.keys():
-                return ValueError(
+                raise ValueError(
                     f"Error: 'ingressName' is missing or empty for ingress item at index {index}"
                 )
             if "port" not in ingress_option.keys():
-                return ValueError(
+                raise ValueError(
                     f"Error: 'port' is missing or empty for ingress item at index {index}"
                 )
             elif not isinstance(ingress_option["port"], int):
-                return ValueError(
+                raise ValueError(
                     f"Error: 'port' is not of type int for ingress item at index {index}"
                 )
             if ingress_option["port"] == 8265:
@@ -105,7 +103,7 @@ def update_dashboard_ingress(
                 else:
                     spec["rules"][0]["host"] = ingress_option["host"]
                 if "ingressClassName" not in ingress_option.keys():
-                    ingress_options["ingressClassName"] = None
+                    del spec["ingressClassName"]
                 else:
                     spec["ingressClassName"] = ingress_option["ingressClassName"]
 
@@ -125,6 +123,7 @@ def update_dashboard_ingress(
                 ingress = api_client.get_cluster_custom_object(
                     "config.openshift.io", "v1", "ingresses", "cluster"
                 )
+                del spec["ingressClassName"]
             except Exception as e:  # pragma: no cover
                 return _kube_api_error_handling(e)
             domain = ingress["spec"]["domain"]
@@ -140,21 +139,21 @@ def update_dashboard_ingress(
 
 def update_rayclient_ingress(
     ingress_item, cluster_name, namespace, ingress_options, ingress_domain
-):
+):  # pragma: no cover
     metadata = ingress_item.get("generictemplate", {}).get("metadata")
     spec = ingress_item.get("generictemplate", {}).get("spec")
     if ingress_options != {}:
         for index, ingress_option in enumerate(ingress_options["ingresses"]):
             if "ingressName" not in ingress_option.keys():
-                return ValueError(
+                raise ValueError(
                     f"Error: 'ingressName' is missing or empty for ingress item at index {index}"
                 )
             if "port" not in ingress_option.keys():
-                return ValueError(
+                raise ValueError(
                     f"Error: 'port' is missing or empty for ingress item at index {index}"
                 )
             elif not isinstance(ingress_option["port"], int):
-                return ValueError(
+                raise ValueError(
                     f"Error: 'port' is not of type int for ingress item at index {index}"
                 )
             if ingress_option["port"] == 10001:
@@ -179,7 +178,7 @@ def update_rayclient_ingress(
                 else:
                     spec["rules"][0]["host"] = ingress_option["host"]
                 if "ingressClassName" not in ingress_option.keys():
-                    ingress_option["ingressClassName"] = None
+                    del spec["ingressClassName"]
                 else:
                     spec["ingressClassName"] = ingress_option["ingressClassName"]
 
@@ -457,23 +456,41 @@ def enable_local_interactive(
 
     command = command.replace("deployment-name", cluster_name)
 
-    if is_openshift_cluster():
-        # We can try get the domain through checking ingresses.config.openshift.io
-        try:
-            config_check()
-            api_client = client.CustomObjectsApi(api_config_handler())
-            ingress = api_client.get_cluster_custom_object(
-                "config.openshift.io", "v1", "ingresses", "cluster"
-            )
-        except Exception as e:  # pragma: no cover
-            return _kube_api_error_handling(e)
-        domain = ingress["spec"]["domain"]
-    elif ingress_domain is None:
-        raise ValueError(
-            "ingress_domain is invalid. For Kubernetes Clusters please specify an ingress domain"
-        )
+    if ingress_options != {}:
+        for index, ingress_option in enumerate(ingress_options["ingresses"]):
+            if ingress_option["port"] == 10001:
+                if "host" not in ingress_option.keys():
+                    raise ValueError(
+                        f"Client host is not specified please include a host for the ingress item at index {index}"
+                    )
+                else:
+                    host = ingress_option["host"]
+                    domain_split = host.split(".", 1)
+                    if len(domain_split) > 1:
+                        domain = domain_split[1]
+                    else:
+                        raise ValueError(
+                            f"The client ingress host is configured incorrectly please specify a host with a correct domain for the ingress item at index {index}"
+                        )
+
     else:
-        domain = ingress_domain
+        if is_openshift_cluster():
+            # We can try get the domain through checking ingresses.config.openshift.io
+            try:
+                config_check()
+                api_client = client.CustomObjectsApi(api_config_handler())
+                ingress = api_client.get_cluster_custom_object(
+                    "config.openshift.io", "v1", "ingresses", "cluster"
+                )
+            except Exception as e:  # pragma: no cover
+                return _kube_api_error_handling(e)
+            domain = ingress["spec"]["domain"]
+        elif ingress_domain is None:
+            raise ValueError(
+                "ingress_domain is invalid. For Kubernetes Clusters please specify an ingress domain"
+            )
+        else:
+            domain = ingress_domain
 
     command = command.replace("server-name", domain)
     update_rayclient_ingress(

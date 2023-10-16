@@ -179,4 +179,24 @@ spec:
                   name: init-myservice
                 priorityClassName: default
       replicas: 1
+    - generictemplate:
+        apiVersion: networking.k8s.io/v1
+        kind: Ingress
+        metadata:
+          name: ray-dashboard-prio-test-cluster
+          namespace: ns
+        spec:
+          ingressClassName: nginx
+          rules:
+          - host: ray-dashboard-prio-test-cluster-ns.apps.cluster.awsroute.org
+            http:
+              paths:
+              - backend:
+                  service:
+                    name: prio-test-cluster-head-svc
+                    port:
+                      number: 8265
+                path: /
+                pathType: Prefix
+      replicas: 1
     Items: []

@@ -297,6 +297,7 @@ spec:
           annotations:
             annotations-example:annotations-example
         spec:
+          ingressClassName: nginx
           rules:
             - http:
                 paths:
@@ -320,7 +321,7 @@ spec:
           labels:
             odh-ray-cluster-service: deployment-name-head-svc
         spec:
-          ingressClassName: openshift-default
+          ingressClassName: nginx
           rules:
             - http:
                 paths:
