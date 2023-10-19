@@ -51,10 +51,16 @@ def createClusterConfig():
     return config
 
 
-def createClusterWithConfig():
+def createClusterWithConfig(mocker):
+    mocker.patch("kubernetes.config.load_kube_config", return_value="ignore")
+    mocker.patch(
+        "kubernetes.client.CustomObjectsApi.get_cluster_custom_object",
+        return_value={"spec": {"domain": "apps.cluster.awsroute.org"}},
+    )
     cluster = Cluster(createClusterConfig())
     return cluster
 
 
-def createDDPJob_with_cluster(ddp_def, cluster=createClusterWithConfig()):
+def createDDPJob_with_cluster(mocker, ddp_def, cluster=None):
+    cluster = createClusterWithConfig(mocker)
     return DDPJob(ddp_def, cluster)
