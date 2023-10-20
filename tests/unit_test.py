@@ -2337,6 +2337,21 @@ def secret_ca_retreival(secret_name, namespace):
     return client.models.V1Secret(data=data)
 
 
+def test_is_openshift_cluster(mocker):
+    mocker.patch("kubernetes.config.load_kube_config", return_value="ignore")
+    mocker.patch.object(
+        client.CustomObjectsApi,
+        "get_cluster_custom_object",
+        side_effect=client.ApiException(status=404),
+    )
+    assert is_openshift_cluster() == False
+    mocker.patch(
+        "kubernetes.client.CustomObjectsApi.get_cluster_custom_object",
+        return_value={"spec": {"domain": ""}},
+    )
+    assert is_openshift_cluster() == True
+
+
 def test_generate_tls_cert(mocker):
     """
     test the function codeflare_sdk.utils.generate_ca_cert generates the correct outputs

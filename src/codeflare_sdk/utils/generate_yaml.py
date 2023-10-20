@@ -45,7 +45,7 @@ def gen_names(name):
 
 
 # Check if the ingress api cluster resource exists
-def is_openshift_cluster():  # pragma: no cover
+def is_openshift_cluster():
     try:
         config_check()
         api_instance = client.CustomObjectsApi(api_config_handler())
