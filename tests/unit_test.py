@@ -75,7 +75,7 @@ from unit_test_support import (
     createDDPJob_with_cluster,
 )
 
-from codeflare_sdk.utils.generate_yaml import gen_names, is_openshift_cluster
+from codeflare_sdk.utils.generate_yaml import gen_names, is_openshift_cluster, read_template, enable_local_interactive
 
 import openshift
 from openshift.selector import Selector
@@ -439,6 +439,71 @@ def test_local_client_url(mocker):
         cluster.local_client_url()
         == "ray://rayclient-unit-test-cluster-localinter-ns.apps.cluster.awsroute.org"
     )
+
+def test_enable_local_interactive(mocker):
+    template = f"{parent}/src/codeflare_sdk/templates/base-template.yaml"
+    user_yaml = read_template(template)
+    aw_spec = user_yaml.get("spec", None)
+    cluster_name = "test-enable-local"
+    namespace = "default"
+    ingress_options = {}
+    ingress_domain = "mytest.domain"
+    mocker.patch("codeflare_sdk.utils.generate_yaml.is_openshift_cluster", return_value=False)
+    volume_mounts = [
+        {
+            "name": "ca-vol",
+            "mountPath": "/home/ray/workspace/ca",
+            "readOnly": True
+         },
+        {
+            "name": "server-cert",
+            "mountPath": "/home/ray/workspace/tls",
+            "readOnly": False
+        }
+    ]
+    volumes = [
+        {
+            "name": "ca-vol",
+            "secret": {
+                "secretName": f"ca-secret-{cluster_name}"
+            },
+            "optional": False
+        },
+        {
+            "name": "server-cert",
+            "emptyDir": {}
+        }
+    ]
+    tls_env = [
+        {
+            "name": "RAY_USE_TLS",
+            "value": "1"
+        },
+        {
+            "name": "RAY_TLS_SERVER_CERT",
+            "value": "/home/ray/workspace/tls/server.crt"
+        },
+        {
+            "name": "RAY_TLS_SERVER_KEY",
+            "value": "/home/ray/workspace/tls/server.key"
+        },
+        {
+            "name": "RAY_TLS_CA_CERT",
+            "value": "/home/ray/workspace/tls/ca.crt"
+        }
+    ]
+    assert aw_spec != None
+    enable_local_interactive(aw_spec, cluster_name, namespace, ingress_options, ingress_domain)
+    # At a minimal, make sure the following items are presented in the appwrapper spec.resources.
+    # 1. headgroup has the initContainers command to generated TLS cert from the mounted CA cert.
+    #    Note: this particular command, the DNS.5 in [alt_name] must match the exposed local_client_url: rayclient-{cluster_name}.{namespace}.{ingress_domain}
+    assert aw_spec["resources"]["GenericItems"][0]["generictemplate"]["spec"]["headGroupSpec"]["template"]["spec"]["initContainers"][0]["command"][2] == f"cd /home/ray/workspace/tls && openssl req -nodes -newkey rsa:2048 -keyout server.key -out server.csr -subj '/CN=ray-head' && printf \"authorityKeyIdentifier=keyid,issuer\\nbasicConstraints=CA:FALSE\\nsubjectAltName = @alt_names\\n[alt_names]\\nDNS.1 = 127.0.0.1\\nDNS.2 = localhost\\nDNS.3 = ${{FQ_RAY_IP}}\\nDNS.4 = $(awk 'END{{print $1}}' /etc/hosts)\\nDNS.5 = rayclient-{cluster_name}-$(cat /var/run/secrets/kubernetes.io/serviceaccount/namespace).{ingress_domain}\">./domain.ext && cp /home/ray/workspace/ca/* . && openssl x509 -req -CA ca.crt -CAkey ca.key -in server.csr -out server.crt -days 365 -CAcreateserial -extfile domain.ext"
+    assert aw_spec["resources"]["GenericItems"][0]["generictemplate"]["spec"]["headGroupSpec"]["template"]["spec"]["initContainers"][0]["volumeMounts"] == volume_mounts
+    assert aw_spec["resources"]["GenericItems"][0]["generictemplate"]["spec"]["headGroupSpec"]["template"]["spec"]["volumes"] == volumes
+    # 2. workerGrooupSpec has the initContainers command to generated TLS cert from the mounted CA cert.
+    assert aw_spec["resources"]["GenericItems"][0]["generictemplate"]["spec"]["workerGroupSpecs"][0]["template"]["spec"]["initContainers"][1]["command"][2] == "cd /home/ray/workspace/tls && openssl req -nodes -newkey rsa:2048 -keyout server.key -out server.csr -subj '/CN=ray-head' && printf \"authorityKeyIdentifier=keyid,issuer\\nbasicConstraints=CA:FALSE\\nsubjectAltName = @alt_names\\n[alt_names]\\nDNS.1 = 127.0.0.1\\nDNS.2 = localhost\\nDNS.3 = ${FQ_RAY_IP}\\nDNS.4 = $(awk 'END{print $1}' /etc/hosts)\">./domain.ext && cp /home/ray/workspace/ca/* . && openssl x509 -req -CA ca.crt -CAkey ca.key -in server.csr -out server.crt -days 365 -CAcreateserial -extfile domain.ext"
+    assert aw_spec["resources"]["GenericItems"][0]["generictemplate"]["spec"]["workerGroupSpecs"][0]["template"]["spec"]["initContainers"][1]["volumeMounts"] == volume_mounts
+    assert aw_spec["resources"]["GenericItems"][0]["generictemplate"]["spec"]["workerGroupSpecs"][0]["template"]["spec"]["volumes"] == volumes
 
 
 def ray_addr(self, *args):
